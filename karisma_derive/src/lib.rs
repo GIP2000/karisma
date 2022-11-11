@@ -43,6 +43,8 @@ pub fn db_traits_derive(input: TokenStream) -> TokenStream {
     }
 
     let model_name = get_model_name(&input.attrs);
+    // let crate_model_path =
+    //     syn::Ident::new(&format!("crate::model::{}", model_name), model_name.span());
 
     let fields = match input.data {
         syn::Data::Struct(ds) => match ds.fields {
@@ -78,7 +80,7 @@ pub fn db_traits_derive(input: TokenStream) -> TokenStream {
         .collect();
 
     let where_type_ident = syn::Ident::new(
-        &format!("{}Types", model_name.to_string()),
+        &format!("{}EnumTypes", model_name.to_string()),
         model_name.span(),
     );
 
@@ -87,16 +89,31 @@ pub fn db_traits_derive(input: TokenStream) -> TokenStream {
         impl #impl_generics crate::DbMemberTrait for #name #ty_generics #where_clause {
             const SELECT: &'static str = #select_string;
             const NAME: &'static str = "#model_name";
+            type WhereFilterType = crate::model::#where_type_ident;
             fn build_from_query(args: Vec<&str>) -> Self {
                 Self {
                      #(#struct_fields)*
                 }
             }
         }
-        impl #impl_generics DbObject<#name> for #model_name #ty_generics #where_clause {
-            type WhereType = #where_type_ident;
+        impl #impl_generics crate::DbObject<#name> for crate::model::#model_name #ty_generics #where_clause {
+            type WhereFilterType = crate::model::#where_type_ident;
+        }
+
+        impl #impl_generics crate::DbParseable<#name> for crate::RawDbOutput #ty_generics #where_clause {
+            fn db_parse(&self) -> #name {
+                #name::build_from_query(self.split(',').collect())
+            }
+        }
+
+        impl #impl_generics crate::DbParseable<Vec<#name>> for crate::RawDbOutput #ty_generics #where_clause {
+            fn db_parse(&self) -> Vec<#name> {
+                self.split('\n').map(|r| r.db_parse()).collect()
+            }
         }
     };
+
+    println!("{}", expanded);
 
     return TokenStream::from(expanded);
 }
