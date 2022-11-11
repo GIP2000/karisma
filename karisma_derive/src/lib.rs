@@ -43,8 +43,6 @@ pub fn db_traits_derive(input: TokenStream) -> TokenStream {
     }
 
     let model_name = get_model_name(&input.attrs);
-    // let crate_model_path =
-    //     syn::Ident::new(&format!("crate::model::{}", model_name), model_name.span());
 
     let fields = match input.data {
         syn::Data::Struct(ds) => match ds.fields {
@@ -112,8 +110,6 @@ pub fn db_traits_derive(input: TokenStream) -> TokenStream {
             }
         }
     };
-
-    println!("{}", expanded);
 
     return TokenStream::from(expanded);
 }
